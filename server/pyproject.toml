@@ -1,0 +1,32 @@
+[project]
+name = "panoptica-server"
+version = "0.1.0"
+description = "Server side evaluation of panoptica"
+readme = "../README.md"
+authors = [
+    { name = "Erik Großkopf", email = "erik.grosskopf@uni-tuebingen.de" }
+]
+requires-python = ">=3.10"
+dependencies = [
+    "bottle==0.13.4",
+    "panoptica==2.1.7"
+]
+
+[project.scripts]
+panoptica-server = "panoptica_server:main"
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
+
+[tool.pyright]
+include = ["src"]
+typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+[dependency-groups]
+dev = [
+    "pytest==9.1.1",
+    "ruff==0.16.7",
+]
