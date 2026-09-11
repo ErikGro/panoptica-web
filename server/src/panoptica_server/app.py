@@ -1,4 +1,4 @@
-from bottle import Bottle, request
+from bottle import Bottle
 from panoptica_server.evaluation import evaluate_panoptica
 
 def health() -> dict[str, str]:
@@ -7,6 +7,6 @@ def health() -> dict[str, str]:
 def create_app() -> Bottle:
     app = Bottle()
     app.route("/api/health", "GET", health)
-    app.route("/api/evaluate", "GET", evaluate_panoptica)
+    app.route("/api/evaluate", "POST", evaluate_panoptica)
 
     return app
