@@ -1,9 +1,0 @@
-[Unit]
-Description=Watch for panoptica-web deploy requests
-
-[Path]
-PathModified=/opt/panoptica-web/.deploy-request
-Unit=panoptica-restart.service
-
-[Install]
-WantedBy=default.target

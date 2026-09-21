@@ -1,6 +1,0 @@
-[Unit]
-Description=Restart panoptica-web backend after a deploy
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/systemctl --user restart panoptica-server.service

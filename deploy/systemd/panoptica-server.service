@@ -1,0 +1,29 @@
+[Unit]
+Description=panoptica-web backend (Bottle API on 127.0.0.1:8000)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=panoptica
+WorkingDirectory=/opt/panoptica-web/server
+StateDirectory=panoptica-web
+Environment=HOME=/var/lib/panoptica-web
+Environment=UV_CACHE_DIR=/var/lib/panoptica-web/uv-cache
+Environment=UV_PYTHON_INSTALL_DIR=/var/lib/panoptica-web/python
+Environment=UV_PROJECT_ENVIRONMENT=/var/lib/panoptica-web/venv
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/usr/local/bin/uv sync --frozen
+ExecStart=/usr/local/bin/uv run --frozen panoptica-server-serve
+Restart=on-failure
+RestartSec=5s
+# First sync downloads Python 3.10 and heavy wheels (numpy/scipy/SimpleITK via panoptica).
+TimeoutStartSec=900
+
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
