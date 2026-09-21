@@ -22,13 +22,16 @@ Flow:
 
 ### One-time server setup
 
-The backend runs as a dedicated unprivileged `panoptica` **system** service; `webhook-user` restarts
-it through a polkit rule scoped to that one unit (the server wiki's sanctioned pattern — restarting a
-root-owned, non-root unit escalates nothing). No linger, and nothing is written to any account's home
-(uv's cache/venv/Python are redirected under `/var/lib/panoptica-web`).
+The server-side pieces — deploy script, `hooks.yaml` entry, systemd unit, polkit rule, and Caddy
+snippet — all live in **`koflerlab/webhook`**, checked out on the server at `/opt/webhook-config`
+(auto-synced on push), so root installs the copies straight from there. The backend runs as a
+dedicated unprivileged `panoptica` **system** service; `webhook-user` restarts it through a polkit
+rule scoped to that one unit (the server wiki's sanctioned pattern — restarting a root-owned, non-root
+unit escalates nothing). No linger, and nothing is written to any account's home (uv's cache/venv/
+Python are redirected under `/var/lib/panoptica-web`).
 
-Run once, from a checkout of this repo (`$REPO`), by a human account with sudo — `/opt/panoptica-web`
-is empty until the first deploy, and `koflerlab-dist` carries only runtime files, not `deploy/`:
+Run once, by a human account with sudo (after `koflerlab/webhook`'s own deploy has synced these files
+to `/opt/webhook-config`):
 
 ```bash
 sudo ss -tlnp | grep -E ':(8000|90)'          # confirm 127.0.0.1:8000 is free
@@ -39,8 +42,8 @@ sudo install -d -o webhook-user -g webhook-user /opt/panoptica-web
 # uv, system-wide and root-owned (the unit calls /usr/local/bin/uv). If you installed it as
 # another user, just copy the binary: sudo install -m 0755 ~/.local/bin/uv /usr/local/bin/uv
 
-sudo install -m 0644 -o root -g root $REPO/deploy/systemd/panoptica-server.service /etc/systemd/system/
-sudo install -m 0644 -o root -g root $REPO/deploy/polkit/49-panoptica-web.rules /etc/polkit-1/rules.d/
+sudo install -m 0644 -o root -g root /opt/webhook-config/systemd/panoptica-server.service /etc/systemd/system/
+sudo install -m 0644 -o root -g root /opt/webhook-config/polkit/49-panoptica-web.rules /etc/polkit-1/rules.d/
 sudo systemctl daemon-reload
 sudo systemctl enable panoptica-server.service   # starts on the first deploy (needs the source)
 
@@ -49,13 +52,14 @@ printf 'PANOPTICA_WEB_WEBHOOK_SECRET=%s\n' "$(openssl rand -hex 32)" | sudo tee 
 sudo systemctl restart webhook.service
 
 sudo install -m 0644 -o root -g root \
-  $REPO/deploy/caddy/panoptica.koflerlab.org.caddyfile /etc/caddy/conf.d/panoptica.koflerlab.org.caddyfile
+  /opt/webhook-config/caddy/panoptica.koflerlab.org.caddyfile /etc/caddy/conf.d/panoptica.koflerlab.org.caddyfile
 sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
 sudo systemctl reload caddy
 ```
 
-If a unit, the polkit rule, or the Caddy file changes later, re-run its `install` step from the
-updated checkout — they are provisioning config and are not shipped on `koflerlab-dist`.
+Changed the unit, polkit rule, or Caddy file later? Push `koflerlab/webhook`; its next deploy prints
+`DRIFT:` for any whose installed copy diverged — re-run that `install` line (see that repo's
+"Applying privileged config").
 
 SELinux note (AlmaLinux is enforcing): files installed to `/etc` via `install` get correct labels;
 files under `/opt` do not. If Caddy returns 403 on the frontend, check `sudo ausearch -m AVC -ts recent`,
