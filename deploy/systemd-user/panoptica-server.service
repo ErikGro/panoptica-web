@@ -1,0 +1,15 @@
+[Unit]
+Description=panoptica-web backend (Bottle API on 127.0.0.1:8000)
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/panoptica-web/server
+ExecStartPre=/usr/local/bin/uv sync --frozen
+ExecStart=/usr/local/bin/uv run --frozen panoptica-server-serve
+Restart=on-failure
+RestartSec=5s
+# First sync downloads heavy wheels (numpy/scipy/SimpleITK via panoptica).
+TimeoutStartSec=900
+
+[Install]
+WantedBy=default.target
