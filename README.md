@@ -15,7 +15,7 @@ Flow:
 2. That push fires the GitHub webhook `https://hooks.koflerlab.org/hooks/deploy-panoptica-web`.
 3. The webhook runs `deploy/panoptica-web.sh` (in `koflerlab/webhook`) as the unprivileged
    `webhook-user`: it pulls `koflerlab-dist` into `/opt/panoptica-web` and runs
-   `systemctl restart panoptica-server.service`.
+   `systemctl restart --no-block panoptica-server.service`.
 4. Caddy serves `/opt/panoptica-web/frontend` directly, so the frontend is live immediately.
 5. `panoptica-server.service` (root-owned unit, runs as the unprivileged `panoptica` account) runs
    `uv sync --frozen` and serves the new code on `127.0.0.1:8000`.
@@ -47,8 +47,10 @@ sudo install -m 0644 -o root -g root /opt/webhook-config/polkit/49-panoptica-web
 sudo systemctl daemon-reload
 sudo systemctl enable panoptica-server.service   # starts on the first deploy (needs the source)
 
-# webhook secret (one per repo), then restart so it is picked up (env read only at start)
-printf 'PANOPTICA_WEB_WEBHOOK_SECRET=%s\n' "$(openssl rand -hex 32)" | sudo tee -a /etc/webhook/webhook.env
+# webhook secret (one per repo), then restart so it is picked up (env read only at start).
+# Leading \n guards against a missing trailing newline on the existing last line.
+printf '\nPANOPTICA_WEB_WEBHOOK_SECRET=%s\n' "$(openssl rand -hex 32)" | sudo tee -a /etc/webhook/webhook.env
+sudo cat /etc/webhook/webhook.env      # confirm no two vars ended up on one line
 sudo systemctl restart webhook.service
 
 sudo install -m 0644 -o root -g root \
@@ -60,10 +62,6 @@ sudo systemctl reload caddy
 Changed the unit, polkit rule, or Caddy file later? Push `koflerlab/webhook`; its next deploy prints
 `DRIFT:` for any whose installed copy diverged — re-run that `install` line (see that repo's
 "Applying privileged config").
-
-SELinux note (AlmaLinux is enforcing): files installed to `/etc` via `install` get correct labels;
-files under `/opt` do not. If Caddy returns 403 on the frontend, check `sudo ausearch -m AVC -ts recent`,
-then `sudo semanage fcontext -a -t httpd_sys_content_t "/opt/panoptica-web/frontend(/.*)?" && sudo restorecon -Rv /opt/panoptica-web/frontend`.
 
 ### GitHub webhook
 
